@@ -24,12 +24,16 @@ class ReadFromArduino {
   Serial port;
   byte bufferSize14[];
   int encodedBuffer[];
+  final int bigEndMask;
+  final int littleEndMask;
   
   // Constructor
   ReadFromArduino (Serial p) {
     port = p;
     bufferSize14 = new byte[14];
     encodedBuffer = new int[6];
+    bigEndMask = unbinary("00000000000000001111111100000000");
+    littleEndMask = unbinary("00000000000000000000000011111111");
   }
   
   // Return encoded buffer;
@@ -43,23 +47,22 @@ class ReadFromArduino {
       println("Error in encodeBuffer(): the size of buffer is not 14");
       return;
     } else {
-      int[] dest = new int[12];
-      int bigEndMask = unbinary("00000000000000001111111100000000");
-      int littleEndMask = unbinary("00000000000000000000000011111111");
-      arrayCopy(buffer, dest, 12);
+      //arrayCopy(buffer, dest, 12);
       for (int i=0; i<6; i++) {
-        println("i is: ", str(i));
-        int offset = i*0;
+      //  println("i is: ", str(i));
+        int offset = i*2;
+        println(str(offset) + ": " + binary(buffer[offset]));
+        println(str(offset+1) + ": " + binary(buffer[offset+1]));
         encodedBuffer[i] = 0;
-        print(encodedBuffer[i]+ " ");
-        encodedBuffer[i] += (dest[offset] & bigEndMask);
-        print(encodedBuffer[i]+ " ");
-        encodedBuffer[i] += (dest[offset+1] & littleEndMask);
-        println(encodedBuffer[i]+ " ");
-        //println("Big End Mask: ", str(bigEndMask));
-        //println("Little End Mask: ", str(littleEndMask));
-        //println(str(i) + " in encoded Buffer is: ", str(encodedBuffer[i]));
+      //  print(encodedBuffer[i]+ " ");
+        encodedBuffer[i] |= ((int(buffer[offset]) << 8) & bigEndMask);
+      //  print(encodedBuffer[i]+ " ");
+        encodedBuffer[i] |= (buffer[offset+1] & littleEndMask);
+      //  println(encodedBuffer[i]+ " ");
+          //println("Big End Mask: ", str(bigEndMask));
+          //println("Little End Mask: ", str(littleEndMask));
       }
+      println("Thumb in encoded Buffer is: ", str(encodedBuffer[0]));
     }
   }
   
@@ -72,7 +75,7 @@ class ReadFromArduino {
     if (myPort.available() > 14)
     {
       myPort.readBytes(bufferSize14);
-      printArray(bufferSize14);
+      //printArray(bufferSize14);
       isBoundaryFound(bufferSize14[12]);
       if(!isBoundaryFound(bufferSize14[13])) {  
         syncToBoundary();

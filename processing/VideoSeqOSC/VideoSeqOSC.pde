@@ -128,7 +128,7 @@ void draw() {
         float start_delay = 0;
         note = new NoteEvent(i, 1, 1, 1, ih+start_delay);
         active_notes.add(note);
-        break;
+        //break;
       }
     }
   }
@@ -223,6 +223,7 @@ void mousePressed() {
       NoteEvent note = getHotNote(gi);
       note.alreadyHit = true;
       note.hitMe = false;
+      delHotNote(gi);
       printHitTimeOut = MAX_PRINT_TIMEOUT;
     }
   }
@@ -235,4 +236,8 @@ boolean hasHotNote(int x) {
 
 NoteEvent getHotNote(int x) {
   return hotNotes[x];
+}
+
+void delHotNote(int x) {
+  hotNotes[x] = null;
 }

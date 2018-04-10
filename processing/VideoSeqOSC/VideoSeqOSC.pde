@@ -110,6 +110,9 @@ void draw() {
   if(tic) {
     
     // For each finger randomly create or not a NoteEvent
+    /*
+    THIS WILL BE REPLACED BY FRANCESC'S CODE
+    */
     for (int i=0; i < 5; i++) {
       
       context_array[i] = int(random(0,1.9));
@@ -123,6 +126,41 @@ void draw() {
       }
     }
   }
+  
+  /*
+  
+  **************************************************  
+  * PSEUDO-CODE FOR CALCULATING ERRORS/PERFORMANCE 
+  **************************************************
+  * This pseudo-code takes care of receiving the array from the
+  * Arduino and checking if a note was hit, eventually sending a feedback
+  * to the motor sensors.
+  **************************************************
+  
+  encoded_array = receiveArrayFromSensors()
+  
+  for each finger in encoded_array:
+    if hotNotes[finger] != null:
+      note = hotNotes[finger]
+      note.hitMe = false
+      note.alreadyHit = true
+      remove note from hotNotes
+      print HIT
+      
+      error = calculateError(note.pressure, note.position, finger.pressure)
+      
+      // calculateError confronts the note pressure with the finger pressure,
+      // and the note position (which can be y_pos for example) with the position
+      // of the green line and returns some error measure. For example:
+      //    error.errorPressure = correct note but with wrong pressure
+      //    error.errorTime = correct note but too early or too late
+      //                      (before or after the green line)
+      
+      sendSensorFeedback(finger, error)
+    end if
+  end for
+  
+  */
   
   ih_old = ih;
   stroke(255);
@@ -182,11 +220,30 @@ void draw() {
 
       if (noteEv.isActive &&      // if the note is active
           !noteEv.alreadyHit &&   // and it hasn't been hit already
-          noteEv.hitMe)           // and you can still hit it
+          noteEv.hitMe)           // and you could still hit it
       {
         noteEv.hitMe = false;     // you can't hit it anymore
         noteEv.missed = true;     // you missed it
         printMissTimeOut = MAX_PRINT_TIMEOUT;    // print "MISS"
+        
+        /*
+        
+        **************************************************  
+        * PSEUDO-CODE FOR CALCULATING ERRORS/PERFORMANCE *
+        **************************************************
+        * This pseudo code takes care of sending a feedback to the motors
+        * if a note was missed.
+        * 
+        * N.B.: here we are already inside the condition when the note was missed!
+        **************************************************
+        
+        error = calculateError()    // if you want, I don't know what error you want to calculate
+                                    // when you miss a note
+                                    
+        sendSensorFeedback(finger, "missed")
+        // The variable finger is already defined!
+        
+        */
       }
       
       // if the hot note in the hotNotes array for that finger

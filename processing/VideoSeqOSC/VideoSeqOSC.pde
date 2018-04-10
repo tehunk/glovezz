@@ -9,8 +9,10 @@ int[] context_array;
 float MAX_PRINT_TIMEOUT = 5;
 float printHitTimeOut = 0;
 float printMissTimeOut = 0;
-boolean printMiss = false;
 NoteEvent[] noteSequence;
+// hotNotes is an array of five NoteEvents, one for each finger.
+// A hotNote is a NoteEvent currently in the hitMe status,
+// i.e. that has to be hit (the NoteEvent is in the last row of the grid).
 NoteEvent[] hotNotes;
 ArrayList<NoteEvent> active_notes = new ArrayList<NoteEvent>();
 
@@ -44,10 +46,10 @@ public class NoteEvent{
       public int counter;
       public float time;
       public int ticPassed;
-      public boolean isActive;
-      public boolean hitMe;
-      public boolean alreadyHit;
-      public boolean missed;
+      public boolean isActive;     // the NoteEvent is active (visible on the screen)
+      public boolean hitMe;        // the NoteEvent is in the "hot zone" (you have to hit it!)
+      public boolean alreadyHit;   // the NoteEvent is in the hot zone and has been hit already
+      public boolean missed;       // the NoteEvent has passed the hot zone and has been missed
       
       public NoteEvent(int finger, int pressure, float duration, int counter, float time) {
         this.finger = finger;
@@ -71,29 +73,20 @@ public class NoteEvent{
 
 void setup() {
   println("Loading...");
-  size(320,240);
+  size(320, 240);
   frameRate(30);
-  //oscP5 = new OscP5(this,12345);
-  //myRemoteLocation = new NetAddress("127.0.0.1", 1234);
+  oscP5 = new OscP5(this,12345);
+  myRemoteLocation = new NetAddress("127.0.0.1", 1234);
   context_array = new int[5];
-  //buildSong(10);
   strokeWeight(3);
   hotNotes = new NoteEvent[5];
+  // in the beginning there are no hot notes
   for (int i = 0; i < 5; i++) {
     hotNotes[i] = null;
   }
   f = createFont("Arial", 20, true);
   println("Loaded");
 }
-
-/*
-void buildSong(int numberOfNotes) {
-  noteSequence = new NoteEvent[numberOfNotes];
-  for(int note = 0; note < numberOfNotes; note++) {
-    noteSequence[note] = new NoteEvent();
-  }
-}
-*/
 
 void sendMsgInt(String addr, int v) {
   OscMessage myMessage = new OscMessage(addr);
@@ -105,7 +98,6 @@ int ih_old = -1;
 int t = 0;
 
 void draw() {
-  //int y = 0;
   int dw = int(width/float(gridw));
   int dh = int(height/float(gridh));
   int ih = (frameCount % height) / dh;
@@ -116,48 +108,57 @@ void draw() {
   NoteEvent note;
   
   if(tic) {
-
-    fill(thumb_hard);
+    
+    // For each finger randomly create or not a NoteEvent
     for (int i=0; i < 5; i++) {
+      
       context_array[i] = int(random(0,1.9));
       if(context_array[i] == 1) {
         //float start_delay = random(0,0.9);
         float start_delay = 0;
         note = new NoteEvent(i, 1, 1, 1, ih+start_delay);
         active_notes.add(note);
-        break;
+        break;   // Only create one note for each tic
+                 // (comment previous line to create more than one note)
       }
     }
   }
   
   ih_old = ih;
   stroke(255);
-  for(int i=0;i<gridw;i++) {
-    for(int j=0;j<gridh;j++) {
+  // draw grid
+  for (int i = 0; i < gridw; i++) {
+    for (int j = 0; j < gridh; j++) {
       fill(0);
-      rect(i*dw,j*dh,dw,dh); 
+      rect(i*dw, j*dh, dw, dh); 
     }
   }
+  
+  // draw reference green line
   stroke(color(0, 250, 59));
-  line(0, reference_line, width, reference_line); //reference green line
+  line(0, reference_line, width, reference_line);
 
+  // For each active note
   for (NoteEvent noteEv : active_notes) {
     
     int finger = noteEv.finger;
     float time = noteEv.time;
     float y_pos = frameCount - time * dh;
     
+    // if the note is on the screen
     if (noteEv.isActive) {
 
-      if ((y_pos % height) + dh >= reference_line + threshold
-          && noteEv.isActive
-          && !noteEv.alreadyHit
-          && !noteEv.missed)
+      if ((y_pos % height) + dh >= reference_line + threshold    // if the note has passed the "hit note" start line
+          && !noteEv.hitMe                                       // and it can't be hit yet
+          && !noteEv.alreadyHit                                  // and hasn't been hit yet
+          && !noteEv.missed)                                     // and hasn't been missed
       {
-        noteEv.hitMe = true;
-        hotNotes[finger] = noteEv;
+        noteEv.hitMe = true;                                     // you can hit it
+        hotNotes[finger] = noteEv;                               // add the note to the hotNote array
       }
       
+      // the following "if... else if... else"
+      // selects the color for the note based on its status
       if (noteEv.alreadyHit) {
         fill(0, 0, 0, 0);
       }
@@ -168,36 +169,43 @@ void draw() {
         fill(thumb_hard);
       }
       
+      // draw the note
       rect(finger*dw, y_pos % height, dw, dh * noteEv.duration);
     }
 
+    // increase tics of the note
     if (tic) {
       noteEv.ticPassed++;
     }
     
-    if (y_pos % height > height - threshold) {
-      
-      if (noteEv.isActive &&
-          noteEv.hitMe &&
-          !noteEv.alreadyHit) 
+    if (y_pos % height > height - threshold) {                  // if the note has passed the "hit note" finish line
+
+      if (noteEv.isActive &&      // if the note is active
+          !noteEv.alreadyHit &&   // and it hasn't been hit already
+          noteEv.hitMe)           // and you can still hit it
       {
-        noteEv.hitMe = false;
-        noteEv.missed = true;
-        printMissTimeOut = MAX_PRINT_TIMEOUT;
+        noteEv.hitMe = false;     // you can't hit it anymore
+        noteEv.missed = true;     // you missed it
+        printMissTimeOut = MAX_PRINT_TIMEOUT;    // print "MISS"
       }
       
+      // if the hot note in the hotNotes array for that finger
+      // is the same as the note we're evaluating
       if (hotNotes[finger] == noteEv) {
-        hotNotes[finger] = null;
+        hotNotes[finger] = null;      // remove it from the hotNotes array
       }
       
     }
 
+    // if the note tics are more than the number of rows in the grid
+    // (the note is out of the screen)
     if (noteEv.ticPassed > gridh) {
-      noteEv.isActive = false;
+      noteEv.isActive = false;    // the note is not active anymore
     }
     
   }
   
+  // print MISS with fadeout effect and decreasing font size
   if (printMissTimeOut > 0) {
     float factor = printMissTimeOut / MAX_PRINT_TIMEOUT;
     textFont(f, 60 * factor);
@@ -207,6 +215,7 @@ void draw() {
     printMissTimeOut -= .10;
   }
   
+  // print HIT with fadeout effect and decreasing font size
   if (printHitTimeOut > 0) {
     float factor = printHitTimeOut / MAX_PRINT_TIMEOUT;
     textFont(f, 60 * factor);
@@ -221,15 +230,20 @@ void draw() {
 }
 
 void mousePressed() {
-  int gi = int(mouseX/float(width) * gridw);
-  int gj = int(mouseY/float(height) * gridh);
+  int finger = int(mouseX/float(width) * gridw);
+  int row = int(mouseY/float(height) * gridh);
   // if mouse pressed on the last row of rectangles
-  if (gj == 5) {
-    if(hasHotNote(gi)) {
-      NoteEvent note = getHotNote(gi);
+  if (row == 5) {
+    // check if the square clicked has a hot note inside
+    if(hasHotNote(finger)) {
+      NoteEvent note = getHotNote(finger);
+      // note has been hit
       note.alreadyHit = true;
+      // you can't hit the same hot note twice
       note.hitMe = false;
-      delHotNote(gi);
+      // remove the note from the array of hot notes
+      delHotNote(finger);
+      // print "HIT"
       printHitTimeOut = MAX_PRINT_TIMEOUT;
     }
   }

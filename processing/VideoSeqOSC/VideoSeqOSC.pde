@@ -39,6 +39,9 @@ color pinki_soft = #FFCC99;
 color pinki_medium = #FF8000;
 color pinki_hard = #CC6600;
 
+int ih_old = -1;
+int t = 0;
+
 public class NoteEvent{
       public int finger;
       public int pressure;
@@ -71,6 +74,45 @@ public class NoteEvent{
       }
 }
 
+//send OSC message
+void sendMsgInt(String addr, int v) {
+  OscMessage myMessage = new OscMessage(addr);
+  myMessage.add(v); 
+  oscP5.send(myMessage, myRemoteLocation); 
+}
+
+void mousePressed() {
+  int finger = int(mouseX/float(width) * gridw);
+  int row = int(mouseY/float(height) * gridh);
+  // if mouse pressed on the last row of rectangles
+  if (row == 5) {
+    // check if the square clicked has a hot note inside
+    if(hasHotNote(finger)) {
+      NoteEvent note = getHotNote(finger);
+      // note has been hit
+      note.alreadyHit = true;
+      // you can't hit the same hot note twice
+      note.hitMe = false;
+      // remove the note from the array of hot notes
+      delHotNote(finger);
+      // print "HIT"
+      printHitTimeOut = MAX_PRINT_TIMEOUT;
+    }
+  }
+}
+
+boolean hasHotNote(int x) {
+  return (hotNotes[x] != null);
+}
+
+NoteEvent getHotNote(int x) {
+  return hotNotes[x];
+}
+
+void delHotNote(int x) {
+  hotNotes[x] = null;
+}
+
 void setup() {
   println("Loading...");
   size(320, 240);
@@ -88,15 +130,6 @@ void setup() {
   println("Loaded");
 }
 
-void sendMsgInt(String addr, int v) {
-  OscMessage myMessage = new OscMessage(addr);
-  myMessage.add(v); 
-  oscP5.send(myMessage, myRemoteLocation); 
-}
-
-int ih_old = -1;
-int t = 0;
-
 void draw() {
   int dw = int(width/float(gridw));
   int dh = int(height/float(gridh));
@@ -107,6 +140,7 @@ void draw() {
   boolean tic = ih_old != ih;
   NoteEvent note;
   
+  //code only to create notes
   if(tic) {
     
     // For each finger randomly create or not a NoteEvent
@@ -137,25 +171,48 @@ void draw() {
   * to the motor sensors.
   **************************************************
   
+  //This reads the encoded array that we receive from Arduino at each cycle
   encoded_array = receiveArrayFromSensors()
+  //I think we need to trigger the event when the array from sensors is not all 0 (at least a finger is pressed)
+  //this is to simulate the mousepressed event
   
-  for each finger in encoded_array:
-    if hotNotes[finger] != null:
-      note = hotNotes[finger]
-      note.hitMe = false
-      note.alreadyHit = true
-      remove note from hotNotes
-      print HIT
+  boolean checkEvent(int[] encoded){
+    zeros = [0, 0, 0, 0, 0]
+    if (encoded != zeros){
+      return true
+    }
+    else{
+      return false
+    }
+  }
+  
+  if(checkEvent(encoded_array)){ 
+    //do something as mousepressed
+    for each finger in encoded_array:
+      if(hotNotes[finger] != null){
+        note = hotNotes[finger]
+        note.hitMe = false;
+        note.alreadyHit = true;
+        hotNotes[finger] = null;
+        print HIT
+        
+        //i would pass the whole note and make two different controls  
+        error = calculateError(note, finger.pressure)
+        //hopefully we will receive values from 1 to 3 for the pressure (1 = soft, 2 = medium, 3 = hard)
+        void calculateError(NoteEvent note, int fingerPressure){
+        if ()
+        }    
+        // calculateError confronts the note pressure with the finger pressure,
+        // and the note position (which can be y_pos for example) with the position
+        // of the green line and returns some error measure. For example:
+        //    error.errorPressure = correct note but with wrong pressure
+        //    error.errorTime = correct note but too early or too late
+        //                      (before or after the green line)
       
-      error = calculateError(note.pressure, note.position, finger.pressure)
+      else
+      //pressed the wrong finger
       
-      // calculateError confronts the note pressure with the finger pressure,
-      // and the note position (which can be y_pos for example) with the position
-      // of the green line and returns some error measure. For example:
-      //    error.errorPressure = correct note but with wrong pressure
-      //    error.errorTime = correct note but too early or too late
-      //                      (before or after the green line)
-      
+      //sendSensorFeedback should send two types of error, one for the position/missed error and one for the wrong pressure
       sendSensorFeedback(finger, error)
     end if
   end for
@@ -239,8 +296,11 @@ void draw() {
         
         error = calculateError()    // if you want, I don't know what error you want to calculate
                                     // when you miss a note
+        
+                                    //we can count how many missed notes in all the session and count how many notes we create and make a ratio
                                     
         sendSensorFeedback(finger, "missed")
+        //with send_to_Arduino script we will be able to do it
         // The variable finger is already defined!
         
         */
@@ -284,36 +344,4 @@ void draw() {
   
   delay(20);
 
-}
-
-void mousePressed() {
-  int finger = int(mouseX/float(width) * gridw);
-  int row = int(mouseY/float(height) * gridh);
-  // if mouse pressed on the last row of rectangles
-  if (row == 5) {
-    // check if the square clicked has a hot note inside
-    if(hasHotNote(finger)) {
-      NoteEvent note = getHotNote(finger);
-      // note has been hit
-      note.alreadyHit = true;
-      // you can't hit the same hot note twice
-      note.hitMe = false;
-      // remove the note from the array of hot notes
-      delHotNote(finger);
-      // print "HIT"
-      printHitTimeOut = MAX_PRINT_TIMEOUT;
-    }
-  }
-}
-
-boolean hasHotNote(int x) {
-  return (hotNotes[x] != null);
-}
-
-NoteEvent getHotNote(int x) {
-  return hotNotes[x];
-}
-
-void delHotNote(int x) {
-  hotNotes[x] = null;
 }

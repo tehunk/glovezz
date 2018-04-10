@@ -3,7 +3,6 @@ import netP5.*;
 
 OscP5 oscP5;
 NetAddress myRemoteLocation;
-int [][] events;
 int gridw = 5, gridh = 6;
 int numberOfNotes = 10;
 int[] context_array;
@@ -48,6 +47,7 @@ public class NoteEvent{
       public boolean isActive;
       public boolean hitMe;
       public boolean alreadyHit;
+      public boolean missed;
       
       public NoteEvent(int finger, int pressure, float duration, int counter, float time) {
         this.finger = finger;
@@ -59,39 +59,41 @@ public class NoteEvent{
         this.ticPassed = 0;
         this.hitMe = false;
         this.alreadyHit = false;
+        this.missed = false;
       }
 
       public NoteEvent() {
         this.finger = 1;
         this.pressure = 0;
         this.duration = 1;
-        //this.time = time;
       }
 }
 
 void setup() {
+  println("Loading...");
   size(320,240);
   frameRate(30);
-  oscP5 = new OscP5(this,12345);
-  myRemoteLocation = new NetAddress("127.0.0.1",1234);
-  events = new int[gridw][gridh];
+  //oscP5 = new OscP5(this,12345);
+  //myRemoteLocation = new NetAddress("127.0.0.1", 1234);
   context_array = new int[5];
-  buildSong(10);
+  //buildSong(10);
   strokeWeight(3);
   hotNotes = new NoteEvent[5];
   for (int i = 0; i < 5; i++) {
     hotNotes[i] = null;
   }
   f = createFont("Arial", 20, true);
+  println("Loaded");
 }
 
+/*
 void buildSong(int numberOfNotes) {
   noteSequence = new NoteEvent[numberOfNotes];
   for(int note = 0; note < numberOfNotes; note++) {
     noteSequence[note] = new NoteEvent();
   }
-  //print(noteSequence[0].finger);
 }
+*/
 
 void sendMsgInt(String addr, int v) {
   OscMessage myMessage = new OscMessage(addr);
@@ -103,23 +105,18 @@ int ih_old = -1;
 int t = 0;
 
 void draw() {
-  int y = 0;
+  //int y = 0;
   int dw = int(width/float(gridw));
   int dh = int(height/float(gridh));
   int ih = (frameCount % height) / dh;
   int reference_line = height-dh;
+  //float threshold = 0;
+  float threshold = float(dh) / 2;
   boolean tic = ih_old != ih;
   NoteEvent note;
+  
   if(tic) {
-    //for(int j = 0;j<gridw;j++) {
-    //  if(events[j][ih] > 0) sendMsgInt("/play",j+1); // si algun es troba al grid iw mira per tots els heighs i si algun > 0 envia missatge play
-    //  else {
-    //    if(events[j][(ih-1+gridh)%gridh] > 0) sendMsgInt("/stop",j+1); //si algun es troba al grid iw-1 mira per tots els heighs i si algun > 0 envia missatge stop 
-    //  }
-    //print
-        
-    //t++;
-    //}
+
     fill(thumb_hard);
     for (int i=0; i < 5; i++) {
       context_array[i] = int(random(0,1.9));
@@ -128,7 +125,7 @@ void draw() {
         float start_delay = 0;
         note = new NoteEvent(i, 1, 1, 1, ih+start_delay);
         active_notes.add(note);
-        //break;
+        break;
       }
     }
   }
@@ -143,27 +140,26 @@ void draw() {
   }
   stroke(color(0, 250, 59));
   line(0, reference_line, width, reference_line); //reference green line
-  //for (int i = 0; i < active_notes.size(); i++) {
+
   for (NoteEvent noteEv : active_notes) {
     
-    //NoteEvent noteEv = active_notes.get(i);
     int finger = noteEv.finger;
     float time = noteEv.time;
     float y_pos = frameCount - time * dh;
     
     if (noteEv.isActive) {
 
-      if ((y_pos % height) + dh >= reference_line 
+      if ((y_pos % height) + dh >= reference_line + threshold
           && noteEv.isActive
-          && !noteEv.alreadyHit)
+          && !noteEv.alreadyHit
+          && !noteEv.missed)
       {
         noteEv.hitMe = true;
         hotNotes[finger] = noteEv;
-        //println("press! ", finger);
       }
       
       if (noteEv.alreadyHit) {
-        fill(0,0,0,0);
+        fill(0, 0, 0, 0);
       }
       else if (noteEv.hitMe) {
         fill(index_hard);
@@ -172,23 +168,32 @@ void draw() {
         fill(thumb_hard);
       }
       
-      rect(finger*dw, y_pos % height, dw, dh*noteEv.duration);
+      rect(finger*dw, y_pos % height, dw, dh * noteEv.duration);
     }
 
     if (tic) {
       noteEv.ticPassed++;
     }
-
-    if (noteEv.ticPassed > gridh) {
-      if (noteEv.isActive && !noteEv.alreadyHit) {
+    
+    if (y_pos % height > height - threshold) {
+      
+      if (noteEv.isActive &&
+          noteEv.hitMe &&
+          !noteEv.alreadyHit) 
+      {
+        noteEv.hitMe = false;
+        noteEv.missed = true;
         printMissTimeOut = MAX_PRINT_TIMEOUT;
       }
-      noteEv.isActive = false;
-      noteEv.hitMe = false;
+      
       if (hotNotes[finger] == noteEv) {
         hotNotes[finger] = null;
       }
-      //active_notes.remove(i);
+      
+    }
+
+    if (noteEv.ticPassed > gridh) {
+      noteEv.isActive = false;
     }
     
   }
@@ -218,6 +223,7 @@ void draw() {
 void mousePressed() {
   int gi = int(mouseX/float(width) * gridw);
   int gj = int(mouseY/float(height) * gridh);
+  // if mouse pressed on the last row of rectangles
   if (gj == 5) {
     if(hasHotNote(gi)) {
       NoteEvent note = getHotNote(gi);
@@ -227,7 +233,6 @@ void mousePressed() {
       printHitTimeOut = MAX_PRINT_TIMEOUT;
     }
   }
-  //println("click! ", gi, " ", gj);
 }
 
 boolean hasHotNote(int x) {

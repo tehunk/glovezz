@@ -133,9 +133,9 @@ void setup() {
   frameRate(60);
   oscP5 = new OscP5(this,12345);
   myRemoteLocation = new NetAddress("127.0.0.1",1234);
-  String portName = Serial.list()[0]; //ttyACM0 on Linux
-  myPort = new Serial(this, portName, 9600);
-  fromArduino = new ReadFromArduino(myPort);
+  //String portName = Serial.list()[0]; //ttyACM0 on Linux
+  //myPort = new Serial(this, portName, 9600);
+  //fromArduino = new ReadFromArduino(myPort);
   context_array = new int[5];
   strokeWeight(3);
   String[] fingers = loadStrings("song/fingers.txt");
@@ -186,8 +186,8 @@ void draw() {
   boolean tic = ih_old != ih;
   //NoteEvent note;
   
-  fromArduino.read();
-  encodedBuffer = fromArduino.getEncodedBuffer();
+  //fromArduino.read();
+  //encodedBuffer = fromArduino.getEncodedBuffer();
 
   
   //code only to create notes
@@ -288,6 +288,7 @@ void draw() {
   for (NoteEvent noteEv : active_notes) {
     
     int finger = noteEv.finger;
+    int pressure = noteEv.pressure;
     float time = noteEv.time;
     float y_pos = frameCount - time * dh;
     
@@ -312,11 +313,11 @@ void draw() {
         fill(index_hard);
       }
       else {
-        fill(thumb_hard);
+        fill(Colors[finger][pressure]);
       }
       
       // draw the note
-      rect(finger*dw, y_pos % height, dw, dh * noteEv.duration);
+      rect(finger*dw, y_pos-noteEv.duration % height, dw, dh * noteEv.duration);
     }
 
     // increase tics of the note
@@ -367,7 +368,7 @@ void draw() {
 
     // if the note tics are more than the number of rows in the grid
     // (the note is out of the screen)
-    if (noteEv.ticPassed > gridh) {
+    if (noteEv.ticPassed > gridh + noteEv.time) {
       noteEv.isActive = false;    // the note is not active anymore
     }
     

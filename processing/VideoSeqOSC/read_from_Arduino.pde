@@ -3,22 +3,22 @@ Serial myPort;  // Create object from Serial class
 byte B_BUFFER2[] = {0, 0};
 ReadFromArduino fromArduino;
 
-void setup()
-{
-  //printArray(Serial.list());
-  String portName = Serial.list()[0]; //ttyACM0 on Linux
-  myPort = new Serial(this, portName, 9600);
-  fromArduino = new ReadFromArduino(myPort);
-}
+//void setup()
+//{
+//  //printArray(Serial.list());
+//  String portName = Serial.list()[0]; //ttyACM0 on Linux
+//  myPort = new Serial(this, portName, 9600);
+//  fromArduino = new ReadFromArduino(myPort);
+//}
 
-void draw()
-{
-  fromArduino.read();
-  fromArduino.getEncodedBuffer();
-  //printArray(fromArduino.getEncodedBuffer());
-  delay(50);
+//void draw()
+//{
+//  fromArduino.read();
+//  fromArduino.getEncodedBuffer();
+//  //printArray(fromArduino.getEncodedBuffer());
+//  delay(50);
 
-}
+//}
 
 class ReadFromArduino {
   Serial port;
@@ -51,13 +51,14 @@ class ReadFromArduino {
       for (int i=0; i<6; i++) {
       //  println("i is: ", str(i));
         int offset = i*2;
-        println(str(offset) + ": " + binary(buffer[offset]));
-        println(str(offset+1) + ": " + binary(buffer[offset+1]));
+        //println(str(offset) + ": " + binary(buffer[offset]));
+        //println(str(offset+1) + ": " + binary(buffer[offset+1]));
         encodedBuffer[i] = 0;
         encodedBuffer[i] |= ((int(buffer[offset]) << 8) & bigEndMask);
         encodedBuffer[i] |= (buffer[offset+1] & littleEndMask);
       }
-      println("Thumb in encoded Buffer is: ", str(encodedBuffer[0]));
+      //println("Thumb in encoded Buffer is: ", str(encodedBuffer[0]));
+      printArray(encodedBuffer);
     }
   }
   

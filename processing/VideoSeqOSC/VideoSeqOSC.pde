@@ -97,6 +97,8 @@ void mousePressed() {
       delHotNote(finger);
       // print "HIT"
       printHitTimeOut = MAX_PRINT_TIMEOUT;
+      //play note
+      sendMsgInt("/play",finger);
     }
   }
 }

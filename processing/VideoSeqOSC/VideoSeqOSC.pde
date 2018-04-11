@@ -6,6 +6,7 @@ NetAddress myRemoteLocation;
 int gridw = 5, gridh = 6;
 int numberOfNotes = 10;
 int[] context_array;
+int missedNotes = 0;
 float MAX_PRINT_TIMEOUT = 5;
 float printHitTimeOut = 0;
 float printMissTimeOut = 0;
@@ -133,9 +134,9 @@ void setup() {
   frameRate(60);
   oscP5 = new OscP5(this,12345);
   myRemoteLocation = new NetAddress("127.0.0.1",1234);
-  //String portName = Serial.list()[0]; //ttyACM0 on Linux
-  //myPort = new Serial(this, portName, 9600);
-  //fromArduino = new ReadFromArduino(myPort);
+  String portName = Serial.list()[0]; //ttyACM0 on Linux
+  myPort = new Serial(this, portName, 9600);
+  fromArduino = new ReadFromArduino(myPort);
   context_array = new int[5];
   strokeWeight(3);
   String[] fingers = loadStrings("song/fingers.txt");
@@ -180,18 +181,35 @@ void draw() {
   int dh = int(height/float(gridh));
   int ih = (frameCount % height) / dh;
   int reference_line = height-dh;
-  int[] encodedBuffer;
+  int[] encodedBuffer = new int[5];
   //float threshold = 0;
   float threshold = float(dh) / 2;
   boolean tic = ih_old != ih;
   //NoteEvent note;
   
-  //fromArduino.read();
-  //encodedBuffer = fromArduino.getEncodedBuffer();
+  fromArduino.read();
+  encodedBuffer = fromArduino.getEncodedBuffer();
 
-  
+  for (int finger = 0; finger < 5; finger++) {
+    if (encodedBuffer[finger] > 10) {
+      if(hasHotNote(finger)) {
+        NoteEvent note = getHotNote(finger);
+        // note has been hit
+        note.alreadyHit = true;
+        // you can't hit the same hot note twice
+        note.hitMe = false;
+        // remove the note from the array of hot notes
+        delHotNote(finger);
+        // print "HIT"
+        printHitTimeOut = MAX_PRINT_TIMEOUT;
+        //play note
+        sendMsgInt("/play",finger);
+      }
+    }
+  }
+
   //code only to create notes
-  if(tic) {
+  //if(tic) {
     
     // For each finger randomly create or not a NoteEvent
     /*
@@ -210,7 +228,7 @@ void draw() {
       }
     }
     */
-  }
+  //}
   
   /*
   
@@ -334,7 +352,8 @@ void draw() {
         noteEv.hitMe = false;     // you can't hit it anymore
         noteEv.missed = true;     // you missed it
         printMissTimeOut = MAX_PRINT_TIMEOUT;    // print "MISS"
-        
+        missedNotes++;
+        println((active_notes.size() - float(missedNotes)) / active_notes.size());
         /*
         
         **************************************************  

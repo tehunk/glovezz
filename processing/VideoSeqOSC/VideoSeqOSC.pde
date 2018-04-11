@@ -133,6 +133,9 @@ void setup() {
   frameRate(60);
   oscP5 = new OscP5(this,12345);
   myRemoteLocation = new NetAddress("127.0.0.1",1234);
+  String portName = Serial.list()[0]; //ttyACM0 on Linux
+  myPort = new Serial(this, portName, 9600);
+  fromArduino = new ReadFromArduino(myPort);
   context_array = new int[5];
   strokeWeight(3);
   String[] fingers = loadStrings("song/fingers.txt");
@@ -177,10 +180,15 @@ void draw() {
   int dh = int(height/float(gridh));
   int ih = (frameCount % height) / dh;
   int reference_line = height-dh;
+  int[] encodedBuffer;
   //float threshold = 0;
   float threshold = float(dh) / 2;
   boolean tic = ih_old != ih;
-  NoteEvent note;
+  //NoteEvent note;
+  
+  fromArduino.read();
+  encodedBuffer = fromArduino.getEncodedBuffer();
+
   
   //code only to create notes
   if(tic) {

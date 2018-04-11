@@ -39,6 +39,14 @@ color pinki_soft = #FFCC99;
 color pinki_medium = #FF8000;
 color pinki_hard = #CC6600;
 
+color[][] Colors = {
+  {thumb_soft, thumb_medium, thumb_hard},
+  {index_soft, index_medium, index_hard},
+  {middle_soft, middle_medium, middle_hard},
+  {ring_soft, ring_medium, ring_hard},
+  {pinki_soft, pinki_medium, pinki_hard}
+};
+
 int ih_old = -1;
 int t = 0;
 
@@ -54,11 +62,15 @@ public class NoteEvent{
       public boolean alreadyHit;   // the NoteEvent is in the hot zone and has been hit already
       public boolean missed;       // the NoteEvent has passed the hot zone and has been missed
       
-      public NoteEvent(int finger, int pressure, float duration, int counter, float time) {
+      public NoteEvent(int finger, 
+                        int pressure,
+                        float duration,
+                        //int counter,
+                        float time) {
         this.finger = finger;
         this.pressure = pressure;
         this.duration = duration;
-        this.counter = counter;
+        //this.counter = counter;
         this.time = time;
         this.isActive = true;
         this.ticPassed = 0;
@@ -117,6 +129,33 @@ void delHotNote(int x) {
 
 void setup() {
   println("Loading...");
+  size(320,240);
+  frameRate(60);
+  oscP5 = new OscP5(this,12345);
+  myRemoteLocation = new NetAddress("127.0.0.1",1234);
+  context_array = new int[5];
+  strokeWeight(3);
+  String[] fingers = loadStrings("song/fingers.txt");
+  String[] pressures = loadStrings("song/pressures.txt");
+  String[] time = loadStrings("song/tempos.txt");
+  String[] duration = loadStrings("song/durations.txt");
+  NoteEvent note;
+  for (int i = 0 ; i < fingers.length; i++) {
+    note = new NoteEvent(Integer.parseInt(fingers[i]), Integer.parseInt(pressures[i]), float(duration[i]), float(time[i]));
+    active_notes.add(note);
+  }
+  hotNotes = new NoteEvent[5];
+  // in the beginning there are no hot notes
+  for (int i = 0; i < 5; i++) {
+    hotNotes[i] = null;
+  }
+  f = createFont("Arial", 20, true);
+  println("Done.");
+}
+
+/*
+void setup() {
+  println("Loading...");
   size(320, 240);
   frameRate(30);
   oscP5 = new OscP5(this,12345);
@@ -131,6 +170,7 @@ void setup() {
   f = createFont("Arial", 20, true);
   println("Loaded");
 }
+*/
 
 void draw() {
   int dw = int(width/float(gridw));
@@ -148,7 +188,7 @@ void draw() {
     // For each finger randomly create or not a NoteEvent
     /*
     THIS WILL BE REPLACED BY FRANCESC'S CODE
-    */
+    
     for (int i=0; i < 5; i++) {
       
       context_array[i] = int(random(0,1.9));
@@ -161,6 +201,7 @@ void draw() {
                  // (comment previous line to create more than one note)
       }
     }
+    */
   }
   
   /*

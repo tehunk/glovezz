@@ -2,7 +2,7 @@
  * Arduino Sensor/Motor Communication
  * 
  * Author: Tae Hun Kim
- * Last Updated: 21 Feb 2018
+ * Last Updated: 12 APR 2018
  * 
  * Analog pins are mapped to 5 pressure and 1 flex sensors.
  * Digital PWM pins are connected to vibration motors
@@ -11,15 +11,16 @@
 #include "ReadFromProcessing.h"
 
 // Digital Pins
-const byte PWM_PINS[] = {3, 5, 6, 9, 10, 11};
+const byte PWM_PINS[] = {3, 5, 6, 9, 10};
 ReadFromProcessing processing;
 int motorVal[5];
 int i;
 
 void setup() {
   Serial.begin(9600);
-  pinMode(PWM_PINS[0], OUTPUT);
-  i=0;
+  for (int i=0; i<5; i++){
+    pinMode(PWM_PINS[i], OUTPUT);
+  }
 }
 
 void loop() {

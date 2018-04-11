@@ -28,41 +28,57 @@ void loop() {
  * 2. Receive motor values from serial
  * 3. Control motors with received values
  */
-  //sendSensorVals();
+  sendSensorVals();
   if(Serial)
     processing.readFromSerial();
   if (processing.isReady())
   {
     processing.getMotorVal(motorVal);
-    Serial.print(motorVal[0]);
-    i = motorVal[0]*2;
+    //Serial.print(motorVal[0]);
+    //i = motorVal[0]*2;
+    controlMotors();
+  }  
+}
+
+void controlMotors()
+/*
+ * Write to the motors connected to pwm pins
+ * For now, it will write values directly from processing
+ * Later, there is chance to represent different type of miss
+ */
+{
+  for(int i=0; i<5; i++) {
+    analogWrite(PWM_PINS[i], motorVal[i]);
   }
-  //controlMotors();  NOT IMPLEMENTED YET
-  analogWrite(PWM_PINS[0], i);
 }
 
 void sendSensorVals() {
 /*
  * Serial communication sends an array of 12 bytes
  * Each sensor takes up 2 bytes
- * 0-5th pin: thumb-pinky pressure
- *   6th pin: flex
+ * 0-4th pin: thumb-pinky pressure
+ *   5th pin: flex
  */
   byte boundary[] = {255, 255};
   byte vals[12];
   for (byte i=0; i<6; i++) {
     word raw = analogRead(i);
-    if (i!=0) // For now, only the 0th sensor is working
+    if (i==5) // For now, only the 5th sensor (flex) is not supported
       raw = 0;
     vals[i*2] = highByte(raw);
     vals[i*2+1] = lowByte(raw);
+//    Serial.print(i);
+//    Serial.print(": ");
+//    Serial.print(raw);
+//    Serial.print("\t")
   }
+//  Serial.print("\n");
 
 // Boundary is necessary to deliminate sensor values
 // Since no sensor value can reach "11111111" in binary,
 // this number is used to show the boundary
   Serial.write(boundary, 2);
   Serial.write(vals, sizeof(vals));
-  //Serial.println("\n");
-  //Serial.println(sizeof(vals));
+
+  delay(50);
 }

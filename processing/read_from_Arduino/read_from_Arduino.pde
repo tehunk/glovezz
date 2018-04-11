@@ -57,7 +57,7 @@ class ReadFromArduino {
         encodedBuffer[i] |= ((int(buffer[offset]) << 8) & bigEndMask);
         encodedBuffer[i] |= (buffer[offset+1] & littleEndMask);
       }
-      //println("Thumb in encoded Buffer is: ", str(encodedBuffer[0]));
+      println("Thumb in encoded Buffer is: ", str(encodedBuffer[0]));
     }
   }
   

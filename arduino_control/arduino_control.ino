@@ -8,11 +8,18 @@
  * Digital PWM pins are connected to vibration motors
  */
 
+#include "ReadFromProcessing.h"
+
 // Digital Pins
 const byte PWM_PINS[] = {3, 5, 6, 9, 10, 11};
+ReadFromProcessing processing;
+int motorVal[5];
+int i;
 
 void setup() {
   Serial.begin(9600);
+  pinMode(PWM_PINS[0], OUTPUT);
+  i=0;
 }
 
 void loop() {
@@ -21,10 +28,17 @@ void loop() {
  * 2. Receive motor values from serial
  * 3. Control motors with received values
  */
-  sendSensorVals();
-  //readMotorVals(); NOT IMPLEMENTED YET
+  //sendSensorVals();
+  if(Serial)
+    processing.readFromSerial();
+  if (processing.isReady())
+  {
+    processing.getMotorVal(motorVal);
+    Serial.print(motorVal[0]);
+    i = motorVal[0]*2;
+  }
   //controlMotors();  NOT IMPLEMENTED YET
-  delay(200);
+  analogWrite(PWM_PINS[0], i);
 }
 
 void sendSensorVals() {

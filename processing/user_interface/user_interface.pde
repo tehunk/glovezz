@@ -119,7 +119,6 @@ void draw() {
   stroke(color(0, 250, 59));
   line(0,reference_line, width, reference_line); //reference line
   for (int i = 0; i < active_notes.size(); i++) { 
-  //for (NoteEvent noteEv : active_notes) {
     NoteEvent noteEv = active_notes.get(i);
     int finger = noteEv.finger;
     int pressure = noteEv.pressure;
@@ -129,7 +128,7 @@ void draw() {
 
     if (noteEv.isActive) {
       fill(Colors[finger][pressure]);
-      rect(finger*dw, y_pos % height, dw, dh*noteEv.duration);
+      rect(finger*dw, y_pos-noteEv.duration % height, dw, dh*noteEv.duration);
     }
     if (tic) {
       noteEv.ticPassed++;
@@ -140,7 +139,7 @@ void draw() {
       //active_notes.remove(i);
     }
     else {
-      if(y_pos>0){
+      if(y_pos+noteEv.duration*dh>0){
               noteEv.isActive = true;        
       }
     }

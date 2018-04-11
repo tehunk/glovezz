@@ -54,15 +54,10 @@ class ReadFromArduino {
         println(str(offset) + ": " + binary(buffer[offset]));
         println(str(offset+1) + ": " + binary(buffer[offset+1]));
         encodedBuffer[i] = 0;
-      //  print(encodedBuffer[i]+ " ");
         encodedBuffer[i] |= ((int(buffer[offset]) << 8) & bigEndMask);
-      //  print(encodedBuffer[i]+ " ");
         encodedBuffer[i] |= (buffer[offset+1] & littleEndMask);
-      //  println(encodedBuffer[i]+ " ");
-          //println("Big End Mask: ", str(bigEndMask));
-          //println("Little End Mask: ", str(littleEndMask));
       }
-      println("Thumb in encoded Buffer is: ", str(encodedBuffer[0]));
+      //println("Thumb in encoded Buffer is: ", str(encodedBuffer[0]));
     }
   }
   

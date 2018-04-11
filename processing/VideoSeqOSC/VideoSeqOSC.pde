@@ -6,6 +6,7 @@ NetAddress myRemoteLocation;
 int gridw = 5, gridh = 6;
 int numberOfNotes = 10;
 int[] context_array;
+int missedNotes = 0;
 float MAX_PRINT_TIMEOUT = 5;
 float printHitTimeOut = 0;
 float printMissTimeOut = 0;
@@ -39,6 +40,14 @@ color pinki_soft = #FFCC99;
 color pinki_medium = #FF8000;
 color pinki_hard = #CC6600;
 
+color[][] Colors = {
+  {thumb_soft, thumb_medium, thumb_hard},
+  {index_soft, index_medium, index_hard},
+  {middle_soft, middle_medium, middle_hard},
+  {ring_soft, ring_medium, ring_hard},
+  {pinki_soft, pinki_medium, pinki_hard}
+};
+
 int ih_old = -1;
 int t = 0;
 
@@ -54,11 +63,15 @@ public class NoteEvent{
       public boolean alreadyHit;   // the NoteEvent is in the hot zone and has been hit already
       public boolean missed;       // the NoteEvent has passed the hot zone and has been missed
       
-      public NoteEvent(int finger, int pressure, float duration, int counter, float time) {
+      public NoteEvent(int finger, 
+                        int pressure,
+                        float duration,
+                        //int counter,
+                        float time) {
         this.finger = finger;
         this.pressure = pressure;
         this.duration = duration;
-        this.counter = counter;
+        //this.counter = counter;
         this.time = time;
         this.isActive = true;
         this.ticPassed = 0;
@@ -117,6 +130,36 @@ void delHotNote(int x) {
 
 void setup() {
   println("Loading...");
+  size(320,240);
+  frameRate(60);
+  oscP5 = new OscP5(this,12345);
+  myRemoteLocation = new NetAddress("127.0.0.1",1234);
+  String portName = Serial.list()[0]; //ttyACM0 on Linux
+  myPort = new Serial(this, portName, 9600);
+  fromArduino = new ReadFromArduino(myPort);
+  context_array = new int[5];
+  strokeWeight(3);
+  String[] fingers = loadStrings("song/fingers.txt");
+  String[] pressures = loadStrings("song/pressures.txt");
+  String[] time = loadStrings("song/tempos.txt");
+  String[] duration = loadStrings("song/durations.txt");
+  NoteEvent note;
+  for (int i = 0 ; i < fingers.length; i++) {
+    note = new NoteEvent(Integer.parseInt(fingers[i]), Integer.parseInt(pressures[i]), float(duration[i]), float(time[i]));
+    active_notes.add(note);
+  }
+  hotNotes = new NoteEvent[5];
+  // in the beginning there are no hot notes
+  for (int i = 0; i < 5; i++) {
+    hotNotes[i] = null;
+  }
+  f = createFont("Arial", 20, true);
+  println("Done.");
+}
+
+/*
+void setup() {
+  println("Loading...");
   size(320, 240);
   frameRate(30);
   oscP5 = new OscP5(this,12345);
@@ -131,24 +174,47 @@ void setup() {
   f = createFont("Arial", 20, true);
   println("Loaded");
 }
+*/
 
 void draw() {
   int dw = int(width/float(gridw));
   int dh = int(height/float(gridh));
   int ih = (frameCount % height) / dh;
   int reference_line = height-dh;
+  int[] encodedBuffer = new int[5];
   //float threshold = 0;
   float threshold = float(dh) / 2;
   boolean tic = ih_old != ih;
-  NoteEvent note;
+  //NoteEvent note;
   
+  fromArduino.read();
+  encodedBuffer = fromArduino.getEncodedBuffer();
+
+  for (int finger = 0; finger < 5; finger++) {
+    if (encodedBuffer[finger] > 10) {
+      if(hasHotNote(finger)) {
+        NoteEvent note = getHotNote(finger);
+        // note has been hit
+        note.alreadyHit = true;
+        // you can't hit the same hot note twice
+        note.hitMe = false;
+        // remove the note from the array of hot notes
+        delHotNote(finger);
+        // print "HIT"
+        printHitTimeOut = MAX_PRINT_TIMEOUT;
+        //play note
+        sendMsgInt("/play",finger);
+      }
+    }
+  }
+
   //code only to create notes
-  if(tic) {
+  //if(tic) {
     
     // For each finger randomly create or not a NoteEvent
     /*
     THIS WILL BE REPLACED BY FRANCESC'S CODE
-    */
+    
     for (int i=0; i < 5; i++) {
       
       context_array[i] = int(random(0,1.9));
@@ -161,7 +227,8 @@ void draw() {
                  // (comment previous line to create more than one note)
       }
     }
-  }
+    */
+  //}
   
   /*
   
@@ -239,6 +306,7 @@ void draw() {
   for (NoteEvent noteEv : active_notes) {
     
     int finger = noteEv.finger;
+    int pressure = noteEv.pressure;
     float time = noteEv.time;
     float y_pos = frameCount - time * dh;
     
@@ -263,11 +331,11 @@ void draw() {
         fill(index_hard);
       }
       else {
-        fill(thumb_hard);
+        fill(Colors[finger][pressure]);
       }
       
       // draw the note
-      rect(finger*dw, y_pos % height, dw, dh * noteEv.duration);
+      rect(finger*dw, y_pos-noteEv.duration % height, dw, dh * noteEv.duration);
     }
 
     // increase tics of the note
@@ -284,7 +352,8 @@ void draw() {
         noteEv.hitMe = false;     // you can't hit it anymore
         noteEv.missed = true;     // you missed it
         printMissTimeOut = MAX_PRINT_TIMEOUT;    // print "MISS"
-        
+        missedNotes++;
+        println((active_notes.size() - float(missedNotes)) / active_notes.size());
         /*
         
         **************************************************  
@@ -318,7 +387,7 @@ void draw() {
 
     // if the note tics are more than the number of rows in the grid
     // (the note is out of the screen)
-    if (noteEv.ticPassed > gridh) {
+    if (noteEv.ticPassed > gridh + noteEv.time) {
       noteEv.isActive = false;    // the note is not active anymore
     }
     

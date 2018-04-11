@@ -22,6 +22,7 @@ int[] context_array;
 NoteEvent[] noteSequence;
 ArrayList<NoteEvent> active_notes1 = new ArrayList<NoteEvent>();
 ArrayList<NoteEvent> active_notes2 = new ArrayList<NoteEvent>();
+ArrayList<NoteEvent> active_notes = new ArrayList<NoteEvent>();
 //thumb: red
 color thumb_soft = #FF6666;
 color thumb_medium = #FF0000;
@@ -90,7 +91,7 @@ void setup() {
   rectX = width/2-rectSize-10;
   rectY = height/2-rectSize/2;
   ellipseMode(CENTER);
-  size(320,240);
+  size(640,480);
   frameRate(60);
   oscP5 = new OscP5(this,12345);
   myRemoteLocation = new NetAddress("127.0.0.1",1234);
@@ -153,65 +154,14 @@ void draw() {
   stroke(0);
   ellipse(circleX, circleY, circleSize, circleSize);
   
-  if(play1){
-    print(frameCount);
-    print('\n');
-    int counter = frameCount - init;
-    print(counter);
-    print('\n');   
-    int dw = int(width/float(gridw));
-    int dh = int(height/float(gridh));
-    int ih = (counter%height) / dh;
-    int reference_line = height-dh;
-    boolean tic = ih_old != ih;
-    ih_old = ih;
-    stroke(255);
-    for(int i=0;i<gridw;i++) {
-      for(int j=0;j<gridh;j++) {
-        fill(0);
-        rect(i*dw,j*dh,dw,dh); 
-      }
+  if(play1 || play2){
+    if(play1){
+      active_notes = active_notes1;
     }
-    stroke(color(0, 250, 59));
-    line(0,reference_line, width, reference_line); //reference line
-    for (int i = 0; i < active_notes1.size(); i++) { 
-      NoteEvent noteEv = active_notes1.get(i);
-      int finger = noteEv.finger;
-      int pressure = noteEv.pressure;
-      float time = noteEv.time;
-      float y_pos = counter - time * dh;
-      //noteEv.isActive = true;
-  
-      if (noteEv.isActive) {
-        fill(Colors[finger][pressure]);
-        rect(finger*dw, y_pos-noteEv.duration % height, dw, dh*noteEv.duration);
-      }
-      if (tic) {
-        noteEv.ticPassed++;
-      }
-      
-      if (noteEv.ticPassed > gridh + noteEv.time) {
-        noteEv.isActive = false;
-        //active_notes.remove(i);
-      }
-      else {
-        if(y_pos+noteEv.duration*dh>0){
-                noteEv.isActive = true;        
-        }
-      }
-      
-      if (counter > dh*(active_notes1.size() + gridh + 4)){
-        play1 = false;
-      }
-    }
-    delay(30);}
-    
     if(play2){
-    print(frameCount);
-    print('\n');
-    int counter = frameCount - init;
-    print(counter);
-    print('\n');   
+      active_notes = active_notes2;
+    }      
+    int counter = frameCount - init; 
     int dw = int(width/float(gridw));
     int dh = int(height/float(gridh));
     int ih = (counter%height) / dh;
@@ -227,8 +177,8 @@ void draw() {
     }
     stroke(color(0, 250, 59));
     line(0,reference_line, width, reference_line); //reference line
-    for (int i = 0; i < active_notes2.size(); i++) { 
-      NoteEvent noteEv = active_notes2.get(i);
+    for (int i = 0; i < active_notes.size(); i++) { 
+      NoteEvent noteEv = active_notes.get(i);
       int finger = noteEv.finger;
       int pressure = noteEv.pressure;
       float time = noteEv.time;
@@ -253,8 +203,13 @@ void draw() {
         }
       }
       
-      if (counter > dh*(active_notes2.size() + gridh + 4)){
-        play2 = false;
+      if (counter > dh*(active_notes.size() + gridh + 2)){
+        if(play1){
+          play1 = false;
+        }
+        if(play2){
+          play2 = false;
+        }
       }
     }
     delay(30);}

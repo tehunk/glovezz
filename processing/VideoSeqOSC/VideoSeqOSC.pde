@@ -149,10 +149,10 @@ void setup() {
   //fromArduino = new ReadFromArduino(myPort);
   context_array = new int[5];
   strokeWeight(6);
-  String[] fingers = loadStrings("song/fingers.txt");
-  String[] pressures = loadStrings("song/pressures.txt");
-  String[] time = loadStrings("song/tempos.txt");
-  String[] duration = loadStrings("song/durations.txt");
+  String[] fingers = loadStrings("song/fingers2.txt");
+  String[] pressures = loadStrings("song/pressures2.txt");
+  String[] time = loadStrings("song/tempos2.txt");
+  String[] duration = loadStrings("song/durations2.txt");
   for (int i = 0; i < 5; i++) {
     motorVals[i] = 0;
   }
@@ -317,11 +317,11 @@ void draw() {
         fill(256,0,0);
       }
       else {
-        fill(Colors[finger][1]);
+        fill(Colors[finger][pressure]);
       }
       
       // draw the note
-      ellipse(finger*dw+(dw*0.5), y_pos-noteEv.duration % height, dh, dh*noteEv.duration);
+      ellipse(finger*dw+(dw*0.5), y_pos-noteEv.duration % height, dh * sqrt(noteEv.duration), dh * sqrt(noteEv.duration));
       //rect(finger*dw, y_pos-noteEv.duration % height, dw, dh * noteEv.duration);
     }
 
@@ -340,7 +340,7 @@ void draw() {
         noteEv.missed = true;     // you missed it
         printMissTimeOuts[finger] = MAX_PRINT_TIMEOUT;    // print "MISS"
         missedNotes++;
-        println("Accuracy: ", (active_notes.size() - float(missedNotes)) / active_notes.size());
+        //println("Accuracy: ", (active_notes.size() - float(missedNotes)) / active_notes.size());
         //motorVals[finger] = 100;
         //printArray(motorVals);
         //sendToArduino(myPort, motorVals);
@@ -391,8 +391,17 @@ void draw() {
     }
     else if (printHitTimeOuts[finger] > 0) {
       printHit(finger);
-    } 
+    }
   }
+  
+  float accuracy = (active_notes.size() - float(missedNotes)) / active_notes.size();
+  //stroke(255,255,255);
+  if (accuracy >= 0.5) {
+    fill(0, 255, 0);
+  } else {
+    fill(255, 0, 0);
+  }
+  rect(dw+(dw*0.5), dh, dw*2*accuracy, dh*0.25);
 
 }
 

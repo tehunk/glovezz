@@ -4,12 +4,14 @@ import netP5.*;
 OscP5 oscP5;
 NetAddress myRemoteLocation;
 int gridw = 5, gridh = 6;
+int dw, dh;
 int numberOfNotes = 10;
 int[] context_array;
 int missedNotes = 0;
 float MAX_PRINT_TIMEOUT = 5;
-float printHitTimeOut = 0;
-float printMissTimeOut = 0;
+float[] printHitTimeOuts = {0,0,0,0,0};
+float[] printMissTimeOuts = {0,0,0,0,0};
+float speedFactor;
 NoteEvent[] noteSequence;
 // hotNotes is an array of five NoteEvents, one for each finger.
 // A hotNote is a NoteEvent currently in the hitMe status,
@@ -109,7 +111,9 @@ void mousePressed() {
       // remove the note from the array of hot notes
       delHotNote(finger);
       // print "HIT"
-      printHitTimeOut = MAX_PRINT_TIMEOUT;
+      printHitTimeOuts[finger] = MAX_PRINT_TIMEOUT;
+      motorVals[finger] = byte(100);
+      //sendToArduino(myPort, motorVals);
       //play note
       sendMsgInt("/play",finger);
     }
@@ -130,19 +134,29 @@ void delHotNote(int x) {
 
 void setup() {
   println("Loading...");
-  size(320,240);
+  //size(320,240);
+  fullScreen();
   frameRate(60);
   oscP5 = new OscP5(this,12345);
   myRemoteLocation = new NetAddress("127.0.0.1",1234);
+  dw = int(width/float(gridw));
+  dh = int(height/float(gridh));
+  // (BPM * dh) / (frameRate * 60)
+  speedFactor = (120*dh)/(60*60);
+  print(speedFactor);
   String portName = Serial.list()[0]; //ttyACM0 on Linux
-  myPort = new Serial(this, portName, 9600);
-  fromArduino = new ReadFromArduino(myPort);
+  //myPort = new Serial(this, portName, 9600);
+  //fromArduino = new ReadFromArduino(myPort);
   context_array = new int[5];
-  strokeWeight(3);
+  strokeWeight(6);
   String[] fingers = loadStrings("song/fingers.txt");
   String[] pressures = loadStrings("song/pressures.txt");
   String[] time = loadStrings("song/tempos.txt");
   String[] duration = loadStrings("song/durations.txt");
+  for (int i = 0; i < 5; i++) {
+    motorVals[i] = 0;
+  }
+  //sendToArduino(myPort, motorVals);
   NoteEvent note;
   for (int i = 0 ; i < fingers.length; i++) {
     note = new NoteEvent(Integer.parseInt(fingers[i]), Integer.parseInt(pressures[i]), float(duration[i]), float(time[i]));
@@ -153,32 +167,12 @@ void setup() {
   for (int i = 0; i < 5; i++) {
     hotNotes[i] = null;
   }
+
   f = createFont("Arial", 20, true);
   println("Done.");
 }
 
-/*
-void setup() {
-  println("Loading...");
-  size(320, 240);
-  frameRate(30);
-  oscP5 = new OscP5(this,12345);
-  myRemoteLocation = new NetAddress("127.0.0.1", 1234);
-  context_array = new int[5];
-  strokeWeight(3);
-  hotNotes = new NoteEvent[5];
-  // in the beginning there are no hot notes
-  for (int i = 0; i < 5; i++) {
-    hotNotes[i] = null;
-  }
-  f = createFont("Arial", 20, true);
-  println("Loaded");
-}
-*/
-
 void draw() {
-  int dw = int(width/float(gridw));
-  int dh = int(height/float(gridh));
   int ih = (frameCount % height) / dh;
   int reference_line = height-dh;
   int[] encodedBuffer = new int[5];
@@ -186,49 +180,30 @@ void draw() {
   float threshold = float(dh) / 2;
   boolean tic = ih_old != ih;
   //NoteEvent note;
-  
-  fromArduino.read();
-  encodedBuffer = fromArduino.getEncodedBuffer();
+  //fromArduino.read();
+  //encodedBuffer = fromArduino.getEncodedBuffer();
+  //sendToArduino(myPort, motorVals);
 
+  //printArray(encodedBuffer);
   for (int finger = 0; finger < 5; finger++) {
-    if (encodedBuffer[finger] > 10) {
-      if(hasHotNote(finger)) {
-        NoteEvent note = getHotNote(finger);
-        // note has been hit
-        note.alreadyHit = true;
-        // you can't hit the same hot note twice
-        note.hitMe = false;
-        // remove the note from the array of hot notes
-        delHotNote(finger);
-        // print "HIT"
-        printHitTimeOut = MAX_PRINT_TIMEOUT;
-        //play note
-        sendMsgInt("/play",finger);
+    //if (encodedBuffer[finger] > 10) {
+      //if(hasHotNote(finger)) {
+        break;
+        //NoteEvent note = getHotNote(finger);
+        //// note has been hit
+        //note.alreadyHit = true;
+        //// you can't hit the same hot note twice
+        //note.hitMe = false;
+        //// remove the note from the array of hot notes
+        //delHotNote(finger);
+        //// print "HIT"
+        //printHitTimeOut = MAX_PRINT_TIMEOUT;
+        //// play note
+        //sendMsgInt("/play",finger);
+        //printArray(encodedBuffer);
       }
-    }
-  }
-
-  //code only to create notes
-  //if(tic) {
-    
-    // For each finger randomly create or not a NoteEvent
-    /*
-    THIS WILL BE REPLACED BY FRANCESC'S CODE
-    
-    for (int i=0; i < 5; i++) {
-      
-      context_array[i] = int(random(0,1.9));
-      if(context_array[i] == 1) {
-        //float start_delay = random(0,0.9);
-        float start_delay = 0;
-        note = new NoteEvent(i, 1, 1, 1, ih+start_delay);
-        active_notes.add(note);
-        break;   // Only create one note for each tic
-                 // (comment previous line to create more than one note)
-      }
-    }
-    */
-  //}
+  //  }
+//  }
   
   /*
   
@@ -290,26 +265,32 @@ void draw() {
   
   ih_old = ih;
   stroke(255);
-  // draw grid
+  background(color(240));
+  // draw columns
   for (int i = 0; i < gridw; i++) {
-    for (int j = 0; j < gridh; j++) {
-      fill(0);
-      rect(i*dw, j*dh, dw, dh); 
-    }
+    stroke(256,256,256);
+    line((i+1)*dw, 0, (i+1)*dw, height);
   }
   
+  // draw reference circles
+  fill(50,50,50);
+  for (int i = 0; i < 5; i++) {
+    //stroke(color(0,250,59));
+    stroke(Colors[i][1]);
+    ellipse(i*dw+(dw*0.5), reference_line, dh, dh);
+  }
   // draw reference green line
-  stroke(color(0, 250, 59));
-  line(0, reference_line, width, reference_line);
+  //stroke(color(0, 250, 59));
+  //line(0, height-dh, width, height-dh);
 
   // For each active note
   for (NoteEvent noteEv : active_notes) {
-    
+
     int finger = noteEv.finger;
     int pressure = noteEv.pressure;
     float time = noteEv.time;
-    float y_pos = frameCount - time * dh;
-    
+    float y_pos = (frameCount * speedFactor) - time * dh;
+
     // if the note is on the screen
     if (noteEv.isActive) {
 
@@ -321,21 +302,27 @@ void draw() {
         noteEv.hitMe = true;                                     // you can hit it
         hotNotes[finger] = noteEv;                               // add the note to the hotNote array
       }
-      
+
       // the following "if... else if... else"
       // selects the color for the note based on its status
+      stroke(256);
       if (noteEv.alreadyHit) {
+        stroke(color(0,250,59));
         fill(0, 0, 0, 0);
       }
       else if (noteEv.hitMe) {
         fill(index_hard);
       }
+      else if (noteEv.missed) {
+        fill(256,0,0);
+      }
       else {
-        fill(Colors[finger][pressure]);
+        fill(Colors[finger][1]);
       }
       
       // draw the note
-      rect(finger*dw, y_pos-noteEv.duration % height, dw, dh * noteEv.duration);
+      ellipse(finger*dw+(dw*0.5), y_pos-noteEv.duration % height, dh, dh*noteEv.duration);
+      //rect(finger*dw, y_pos-noteEv.duration % height, dw, dh * noteEv.duration);
     }
 
     // increase tics of the note
@@ -351,9 +338,12 @@ void draw() {
       {
         noteEv.hitMe = false;     // you can't hit it anymore
         noteEv.missed = true;     // you missed it
-        printMissTimeOut = MAX_PRINT_TIMEOUT;    // print "MISS"
+        printMissTimeOuts[finger] = MAX_PRINT_TIMEOUT;    // print "MISS"
         missedNotes++;
-        println((active_notes.size() - float(missedNotes)) / active_notes.size());
+        println("Accuracy: ", (active_notes.size() - float(missedNotes)) / active_notes.size());
+        //motorVals[finger] = 100;
+        //printArray(motorVals);
+        //sendToArduino(myPort, motorVals);
         /*
         
         **************************************************  
@@ -389,30 +379,39 @@ void draw() {
     // (the note is out of the screen)
     if (noteEv.ticPassed > gridh + noteEv.time) {
       noteEv.isActive = false;    // the note is not active anymore
+      //motorVals[finger] = 0;
+      //sendToArduino(myPort, motorVals);
     }
     
   }
   
-  // print MISS with fadeout effect and decreasing font size
-  if (printMissTimeOut > 0) {
-    float factor = printMissTimeOut / MAX_PRINT_TIMEOUT;
-    textFont(f, 60 * factor);
-    fill(255, 0, 0, 255 * factor);
-    textAlign(CENTER);
-    text("MISS :(", width/2, height/2);
-    printMissTimeOut -= .10;
+  for (int finger = 0; finger < 5; finger++) {
+    if (printMissTimeOuts[finger] > 0) {
+      printMiss(finger);
+    }
+    else if (printHitTimeOuts[finger] > 0) {
+      printHit(finger);
+    } 
   }
-  
-  // print HIT with fadeout effect and decreasing font size
-  if (printHitTimeOut > 0) {
-    float factor = printHitTimeOut / MAX_PRINT_TIMEOUT;
-    textFont(f, 60 * factor);
-    fill(0, 255, 0, 255 * factor);
-    textAlign(CENTER);
-    text("HIT :)", width/2, height/2);
-    printHitTimeOut -= .10;
-  }
-  
-  delay(20);
 
+}
+
+// print HIT with fadeout effect and decreasing font size
+void printHit(int finger) {
+  float factor = printHitTimeOuts[finger] / MAX_PRINT_TIMEOUT;
+  textFont(f, 60 * factor);
+  fill(0, 255, 0, 255 * factor);
+  textAlign(CENTER);
+  text("HIT :)", (dw*finger)+(dw*0.5), height/2);
+  printHitTimeOuts[finger] -= .10;
+}
+
+// print MISS with fadeout effect and decreasing font size
+void printMiss(int finger) {
+  float factor = printMissTimeOuts[finger] / MAX_PRINT_TIMEOUT;
+  textFont(f, 60 * factor);
+  fill(255, 0, 0, 255 * factor);
+  textAlign(CENTER);
+  text("MISS :(", (dw*finger)+(dw*0.5), height/2);
+  printMissTimeOuts[finger] -= .10;
 }

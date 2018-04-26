@@ -149,10 +149,10 @@ void setup() {
   //fromArduino = new ReadFromArduino(myPort);
   context_array = new int[5];
   strokeWeight(6);
-  String[] fingers = loadStrings("song/fingers2.txt");
-  String[] pressures = loadStrings("song/pressures2.txt");
-  String[] time = loadStrings("song/tempos2.txt");
-  String[] duration = loadStrings("song/durations2.txt");
+  String[] fingers = loadStrings("song/fingers.txt");
+  String[] pressures = loadStrings("song/pressures.txt");
+  String[] time = loadStrings("song/tempos.txt");
+  String[] duration = loadStrings("song/durations.txt");
   for (int i = 0; i < 5; i++) {
     motorVals[i] = 0;
   }
@@ -206,7 +206,7 @@ void draw() {
 //  }
   
   /*
-  
+ i
   **************************************************  
   * PSEUDO-CODE FOR CALCULATING ERRORS/PERFORMANCE 
   **************************************************
@@ -394,8 +394,12 @@ void draw() {
     }
   }
   
+  stroke(50);
+  fill(0,0,0,0);
+  rect(dw+(dw*0.5), dh, dw*2, dh*0.25);
+  
   float accuracy = (active_notes.size() - float(missedNotes)) / active_notes.size();
-  //stroke(255,255,255);
+  noStroke();
   if (accuracy >= 0.5) {
     fill(0, 255, 0);
   } else {

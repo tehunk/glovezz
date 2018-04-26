@@ -134,8 +134,8 @@ void delHotNote(int x) {
 
 void setup() {
   println("Loading...");
-  //size(320,240);
-  fullScreen();
+  size(320,240);
+  //fullScreen();
   frameRate(60);
   oscP5 = new OscP5(this,12345);
   myRemoteLocation = new NetAddress("127.0.0.1",1234);
@@ -143,8 +143,9 @@ void setup() {
   dh = int(height/float(gridh));
   // (BPM * dh) / (frameRate * 60)
   speedFactor = (120*dh)/(60*60);
+  sendMsgInt("/play",1);
   print(speedFactor);
-  String portName = Serial.list()[0]; //ttyACM0 on Linux
+  //String portName = Serial.list()[0]; //ttyACM0 on Linux
   //myPort = new Serial(this, portName, 9600);
   //fromArduino = new ReadFromArduino(myPort);
   context_array = new int[5];
@@ -169,6 +170,7 @@ void setup() {
   }
 
   f = createFont("Arial", 20, true);
+  sendMsgInt("/volume",100);
   println("Done.");
 }
 
@@ -184,11 +186,11 @@ void draw() {
   //encodedBuffer = fromArduino.getEncodedBuffer();
   //sendToArduino(myPort, motorVals);
 
-  //printArray(encodedBuffer);
+  printArray(encodedBuffer);
   for (int finger = 0; finger < 5; finger++) {
-    //if (encodedBuffer[finger] > 10) {
-      //if(hasHotNote(finger)) {
-        break;
+    if (encodedBuffer[finger] > 100) {
+      if(hasHotNote(finger)) {
+        //break;
         //NoteEvent note = getHotNote(finger);
         //// note has been hit
         //note.alreadyHit = true;
@@ -197,13 +199,13 @@ void draw() {
         //// remove the note from the array of hot notes
         //delHotNote(finger);
         //// print "HIT"
-        //printHitTimeOut = MAX_PRINT_TIMEOUT;
+        //printHitTimeOuts[finger] = MAX_PRINT_TIMEOUT;
         //// play note
         //sendMsgInt("/play",finger);
         //printArray(encodedBuffer);
       }
-  //  }
-//  }
+    }
+  }
   
   /*
  i

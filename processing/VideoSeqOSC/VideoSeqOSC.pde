@@ -105,18 +105,6 @@ void mousePressed() {
     if(hasHotNote(finger)) {
       NoteEvent note = getHotNote(finger);
       hitNote(note);
-      //// note has been hit
-      //note.alreadyHit = true;
-      //// you can't hit the same hot note twice
-      //note.hitMe = false;
-      //// remove the note from the array of hot notes
-      //delHotNote(finger);
-      //// print "HIT"
-      //printHitTimeOuts[finger] = MAX_PRINT_TIMEOUT;
-      //motorVals[finger] = byte(100);
-      ////sendToArduino(myPort, motorVals);
-      ////play note
-      //sendMsgInt("/play",finger);
     }
   }
 }
@@ -143,16 +131,10 @@ void hitNote(NoteEvent note) {
   delHotNote(finger);
   // print "HIT"
   printHitTimeOuts[finger] = MAX_PRINT_TIMEOUT;
-  //motorVals[finger] = byte(100);
-  //sendToArduino(myPort, motorVals);
+  motorVals[finger] = true;
+  sendToArduino(myPort, motorVals);
   //play note
   sendMsgInt("/play",finger);
-}
-
-void sendMotorVals() {
-  while(true) {
-    sendToArduino(myPort, motorVals);
-  }
 }
 
 void setup() {
@@ -177,11 +159,6 @@ void setup() {
   String[] pressures = loadStrings("song/pressures.txt");
   String[] time = loadStrings("song/tempos.txt");
   String[] duration = loadStrings("song/durations.txt");
-  for (int i = 0; i < 5; i++) {
-    motorVals[i] = 0;
-  }
-  thread("sendMotorVals");
-  //sendToArduino(myPort, motorVals);
   NoteEvent note;
   for (int i = 0 ; i < fingers.length; i++) {
     note = new NoteEvent(Integer.parseInt(fingers[i]), Integer.parseInt(pressures[i]), float(duration[i]), float(time[i]));
@@ -202,92 +179,20 @@ void draw() {
   int ih = (frameCount % height) / dh;
   int reference_line = height-dh;
   int[] encodedBuffer = new int[5];
-  //float threshold = 0;
   float threshold = float(dh) / 2;
   boolean tic = ih_old != ih;
-  //NoteEvent note;
   fromArduino.read();
   encodedBuffer = fromArduino.getEncodedBuffer();
-  //sendToArduino(myPort, motorVals);
 
   //printArray(encodedBuffer);
   for (int finger = 0; finger < 5; finger++) {
     if (encodedBuffer[finger] > 100) {
       if(hasHotNote(finger)) {
-        //break;
-        //NoteEvent note = getHotNote(finger);
-        //// note has been hit
-        //note.alreadyHit = true;
-        //// you can't hit the same hot note twice
-        //note.hitMe = false;
-        //// remove the note from the array of hot notes
-        //delHotNote(finger);
-        //// print "HIT"
-        //printHitTimeOuts[finger] = MAX_PRINT_TIMEOUT;
-        //// play note
-        //sendMsgInt("/play",finger);
-        //printArray(encodedBuffer);
+        NoteEvent note = getHotNote(finger);
+        hitNote(note);
       }
     }
   }
-  
-  /*
- i
-  **************************************************  
-  * PSEUDO-CODE FOR CALCULATING ERRORS/PERFORMANCE 
-  **************************************************
-  * This pseudo-code takes care of receiving the array from the
-  * Arduino and checking if a note was hit, eventually sending a feedback
-  * to the motor sensors.
-  **************************************************
-  
-  //This reads the encoded array that we receive from Arduino at each cycle
-  encoded_array = receiveArrayFromSensors()
-  //I think we need to trigger the event when the array from sensors is not all 0 (at least a finger is pressed)
-  //this is to simulate the mousepressed event
-  
-  boolean checkEvent(int[] encoded){
-    zeros = [0, 0, 0, 0, 0]
-    if (encoded != zeros){
-      return true
-    }
-    else{
-      return false
-    }
-  }
-  
-  if(checkEvent(encoded_array)){ 
-    //do something as mousepressed
-    for each finger in encoded_array:
-      if(hotNotes[finger] != null){
-        note = hotNotes[finger]
-        note.hitMe = false;
-        note.alreadyHit = true;
-        hotNotes[finger] = null;
-        print HIT
-        
-        //i would pass the whole note and make two different controls  
-        error = calculateError(note, finger.pressure)
-        //hopefully we will receive values from 1 to 3 for the pressure (1 = soft, 2 = medium, 3 = hard)
-        void calculateError(NoteEvent note, int fingerPressure){
-        if ()
-        }    
-        // calculateError confronts the note pressure with the finger pressure,
-        // and the note position (which can be y_pos for example) with the position
-        // of the green line and returns some error measure. For example:
-        //    error.errorPressure = correct note but with wrong pressure
-        //    error.errorTime = correct note but too early or too late
-        //                      (before or after the green line)
-      
-      else
-      //pressed the wrong finger
-      
-      //sendSensorFeedback should send two types of error, one for the position/missed error and one for the wrong pressure
-      sendSensorFeedback(finger, error)
-    end if
-  end for
-  
-  */
   
   ih_old = ih;
   stroke(255);
@@ -301,19 +206,14 @@ void draw() {
   // draw reference circles
   fill(50,50,50);
   for (int i = 0; i < 5; i++) {
-    //stroke(color(0,250,59));
     stroke(Colors[i][1]);
     ellipse(i*dw+(dw*0.5), reference_line, dh, dh);
   }
-  // draw reference green line
-  //stroke(color(0, 250, 59));
-  //line(0, height-dh, width, height-dh);
-
+  
   // For each active note
   for (NoteEvent noteEv : active_notes) {
 
     int finger = noteEv.finger;
-    int pressure = noteEv.pressure;
     float time = noteEv.time;
     float y_pos = (frameCount * speedFactor) - time * dh;
 
@@ -356,7 +256,6 @@ void draw() {
       
       // draw the note
       ellipse(finger*dw+(dw*0.5), y_pos-noteEv.duration % height, dh * sqrt(noteEv.duration), dh * sqrt(noteEv.duration));
-      //rect(finger*dw, y_pos-noteEv.duration % height, dw, dh * noteEv.duration);
     }
 
     // increase tics of the note
@@ -374,31 +273,6 @@ void draw() {
         noteEv.missed = true;     // you missed it
         printMissTimeOuts[finger] = MAX_PRINT_TIMEOUT;    // print "MISS"
         missedNotes++;
-        //println("Accuracy: ", (active_notes.size() - float(missedNotes)) / active_notes.size());
-        motorVals[finger] = 100;
-        //printArray(motorVals);
-        //sendToArduino(myPort, motorVals);
-        /*
-        
-        **************************************************  
-        * PSEUDO-CODE FOR CALCULATING ERRORS/PERFORMANCE *
-        **************************************************
-        * This pseudo code takes care of sending a feedback to the motors
-        * if a note was missed.
-        * 
-        * N.B.: here we are already inside the condition when the note was missed!
-        **************************************************
-        
-        error = calculateError()    // if you want, I don't know what error you want to calculate
-                                    // when you miss a note
-        
-                                    //we can count how many missed notes in all the session and count how many notes we create and make a ratio
-                                    
-        sendSensorFeedback(finger, "missed")
-        //with send_to_Arduino script we will be able to do it
-        // The variable finger is already defined!
-        
-        */
       }
       
       // if the hot note in the hotNotes array for that finger
@@ -413,9 +287,9 @@ void draw() {
     // (the note is out of the screen)
     if (noteEv.ticPassed > gridh + noteEv.time) {
       noteEv.isActive = false;    // the note is not active anymore
-      motorVals[finger] = 0;
-      //sendToArduino(myPort, motorVals);
     }
+    
+    motorVals[finger] = false;
     
   }
   

@@ -2,84 +2,90 @@
  * Arduino Sensor/Motor Communication
  * 
  * Author: Tae Hun Kim
- * Last Updated: 12 APR 2018
+ * Last Updated: 27 APR 2018
  * 
  * Analog pins are mapped to 5 pressure and 1 flex sensors.
  * Digital PWM pins are connected to vibration motors
  */
 
-#include "ReadFromProcessing.h"
+#include <Timer.h>
+#include <Event.h>
+Timer t;
 
 // Digital Pins
 const byte PWM_PINS[] = {3, 5, 6, 9, 10};
-ReadFromProcessing processing;
+char motorRaw[] = {0, 0, 0, 0, 0, 0};
+int motorVals[] = {0, 0, 0, 0, 0};
 int motorVal[5];
-int i;
+void* CONTEXT = 0;
+byte boundary[] = {255, 255};
+byte vals[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+word raw = 0;
 
 void setup() {
   Serial.begin(9600);
-  for (int i=0; i<5; i++){
+  for (int i=0; i<5; i++)
     pinMode(PWM_PINS[i], OUTPUT);
-  }
+  t.every(50, sendSensorVals, CONTEXT);
 }
 
-void loop() {
 /*
  * 1. Receive values from pressure sensors and write byte codes to serial
  * 2. Receive motor values from serial
  * 3. Control motors with received values
  */
-  sendSensorVals();
-  if(Serial)
-    processing.readFromSerial();
-  if (processing.isReady())
-  {
-    processing.getMotorVal(motorVal);
-    //Serial.print(motorVal[0]);
-    //i = motorVal[0]*2;
-    controlMotors();
-  }  
-}
-
-void controlMotors()
-/*
- * Write to the motors connected to pwm pins
- * For now, it will write values directly from processing
- * Later, there is chance to represent different type of miss
- */
-{
-  for(int i=0; i<5; i++) {
-    analogWrite(PWM_PINS[i], motorVal[i]);
+void loop() {
+  if(Serial.available() >= 6) {
+    digitalWrite(13, HIGH);
+    Serial.readBytesUntil('e', motorRaw, 6);
+    for(int i=0; i<5; i++)
+      motorVals[i] = (motorRaw[i]=='0') ? LOW : HIGH;
+    t.after(100, resetMotor, CONTEXT);
   }
+  for(int i=0; i<5; i++)
+    digitalWrite(PWM_PINS[i], motorVals[i]);
+  t.update();
+  // }  
 }
 
-void sendSensorVals() {
+void resetMotor()
+{
+  for(int i=0; i<5; i++)
+    motorVals[i] = 0;
+  digitalWrite(13, LOW);
+}
+
 /*
  * Serial communication sends an array of 12 bytes
  * Each sensor takes up 2 bytes
  * 0-4th pin: thumb-pinky pressure
  *   5th pin: flex
  */
-  byte boundary[] = {255, 255};
-  byte vals[12];
+void sendSensorVals() {    
   for (byte i=0; i<6; i++) {
-    word raw = analogRead(i);
-    if (i==5) // For now, only the 5th sensor (flex) is not supported
-      raw = 0;
+    raw = analogRead(i);
+    switch (i){
+      case 0: // Thumb has a bigger sensor, so only scale by 2
+        raw *= 3;
+        break;
+      case 5: // 5th sensor (flex) is not supported
+        raw = 0;
+        break;
+      default: // Other pressure sensors are scaled by 3
+        raw *= 6;
+    }
     vals[i*2] = highByte(raw);
     vals[i*2+1] = lowByte(raw);
 //    Serial.print(i);
 //    Serial.print(": ");
-//    Serial.print(raw);
-//    Serial.print("\t")
+//    Serial.println(raw);
   }
-//  Serial.print("\n");
 
 // Boundary is necessary to deliminate sensor values
 // Since no sensor value can reach "11111111" in binary,
 // this number is used to show the boundary
-  Serial.write(boundary, 2);
   Serial.write(vals, sizeof(vals));
-
-  delay(50);
+  Serial.write(boundary, 2);
 }
+
+

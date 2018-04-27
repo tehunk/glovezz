@@ -1,8 +1,15 @@
+//import processing.serial.*;
+//Serial myPort;  // Create object from Serial class
+//byte[] motorVals = new byte[5]; 
+//byte strength = 0;
+//SendToArduino toArduino;
+
 import processing.serial.*;
 Serial myPort;  // Create object from Serial class
-byte[] motorVals = new byte[5]; 
-byte strength = 0;
-//SendToArduino toArduino;
+boolean[] motorVals = {false, false, false, false, false};
+boolean[] pressed = {false, false, false, false, false};
+int index = -1;
+static char BOUNDARY = 'e'; //byte(unbinary("11111111"));
 
 void setup()
 {
@@ -21,10 +28,20 @@ void draw()
     delay(10);
 }
 
-void sendToArduino(Serial myPort, byte[] motorVals) {
-    byte[] sendBuffer = new byte[6];
-    arrayCopy(motorVals, sendBuffer, 5);
-    sendBuffer[5] = -1; //'11111111'
-    printArray(sendBuffer);
-    myPort.write(sendBuffer);
+//void sendToArduino(Serial myPort, byte[] motorVals) {
+//    byte[] sendBuffer = new byte[6];
+//    arrayCopy(motorVals, sendBuffer, 5);
+//    sendBuffer[5] = -1; //'11111111'
+//    printArray(sendBuffer);
+//    myPort.write(sendBuffer);
+//}
+
+void sendToArduino(Serial myPort, boolean[] motorVals) {
+  char[] sendBuffer = new char[5];
+  for (int i=0; i<5; i++) {
+    sendBuffer[i] = motorVals[i] ? '1' : '0'; 
+    myPort.write(sendBuffer[i]);
+  }
+  myPort.write(BOUNDARY);
+  printArray(sendBuffer);
 }
